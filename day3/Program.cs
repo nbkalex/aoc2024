@@ -1,68 +1,19 @@
-﻿using System.ComponentModel;
+﻿using System.Text.RegularExpressions;
+string input = File.ReadAllText("in.txt");
+var matches = Regex.Matches(input, "mul\\(\\d+,\\d+\\)").Select(m => (Match)m).OrderBy(m => m.Index);
+var mul_ops = matches.Select(m => m.Value.Substring(4, m.Length - 5).Split(",").Select(n => int.Parse(n)));
 
-Tuple<int, int> GetMulInstr(string instr, ref int offset, ref bool stop)
-{
-  int nextMulIndex = instr.IndexOf("mul", offset);
-  if (nextMulIndex == -1)
-  {
-    stop = true;
-    return null;
-  }
+int sum = 0;
+foreach(var match in matches)
+{	
+	string current = input.Substring(0, match.Index);
 
-  offset = nextMulIndex + 1;
+	int indexDo = current.LastIndexOf("do()");
+	int indexDont = current.LastIndexOf("don't()");
 
-  try
-  {
-    int i = nextMulIndex + 3;
-
-    if (instr[i] != '(')
-      return null;
-
-    int firstOpStart = ++i;
-    int firstOpEnd = instr.IndexOf(',', i);
-    if (firstOpEnd == -1)
-      return null;
-
-    int firstOp = 0;
-    if (!int.TryParse(instr.Substring(firstOpStart, firstOpEnd - firstOpStart), out firstOp))
-      return null;
-
-    int secondOpStart = firstOpEnd + 1;
-    int secondOpEnd = instr.IndexOf(')', secondOpStart + 1);
-    if (secondOpEnd == -1)
-      return null;
-
-    int secondOp = 0;
-    if (!int.TryParse(instr.Substring(secondOpStart, secondOpEnd - secondOpStart), out secondOp))
-      return null;
-
-    offset = secondOpEnd + 1;
-
-    return new Tuple<int, int>(firstOp, secondOp);
-  }
-  catch
-  {
-    return null;
-  }
+	if(indexDo >= indexDont)
+		sum += match.Value.Substring(4, match.Length - 5).Split(",").Select(n => int.Parse(n)).Aggregate((a, b) => a * b);
 }
 
-var input = File.ReadAllText("in.txt");
-
-List<Tuple<int, int>> list = new List<Tuple<int, int>>();
-bool stop = false;
-int offset = 0;
-bool doInstr = true;
-while (!stop)
-{
-  int switchIndex = input.IndexOf(doInstr ? "don't()" : "do()", offset);
-
-  var mul = GetMulInstr(input, ref offset, ref stop);
-  if(switchIndex != -1 && switchIndex < offset)
-    doInstr = !doInstr;
-
-  if (mul != null && doInstr)
-    list.Add(mul);
-}
-
-Console.WriteLine(list.Sum(m => m.Item1 * m.Item2));
-
+Console.WriteLine(mul_ops.Sum(ops => ops.Aggregate((a, b) => a * b)));
+Console.WriteLine(sum);
