@@ -1,26 +1,10 @@
-﻿using System.Text;
+﻿using System.Runtime.InteropServices;
+using System.Text;
 
-List<long> stones = File.ReadAllText("in.txt").Split(" ").Select(s => long.Parse(s)).ToList();
+var stones = File.ReadAllText("in.txt").Split(" ").Select(s => long.Parse(s)).ToList().ToDictionary(s => s, s => (long)1);
 
-List<long> stones25 = GetStones(25, stones);
-Console.WriteLine(stones25.Count);
-
-
-List<long> stones38 = GetStones(38, stones);
-
-HashSet<long> distinctStones38 = new HashSet<long>(stones38);
-
-Dictionary<long, int> distinctStones38Count = new Dictionary<long, int>();
-
-int i = 0;
-foreach (long stone in distinctStones38)
-{
-  i++;
-  distinctStones38Count.Add(stone, GetStones(37, new List<long>() { stone }).Count);
-}
-
-
-Console.WriteLine(stones38.Sum(s => (long)distinctStones38Count[s]));
+Console.WriteLine(GetStones2(25, stones).Sum(s => s.Value));
+Console.WriteLine(GetStones2(75, stones).Sum(s => s.Value));
 
 int GetLength(long stone)
 {
@@ -33,27 +17,36 @@ int GetLength(long stone)
   return length;
 }
 
-List<long> GetStones(int steps, List<long> astones)
+Dictionary<long, long> GetStones2(int steps, Dictionary<long,long> astones)
 {
   for (int i = 0; i < steps; i++)
   {
-    List<long> blinkStones = new List<long>();
-    for (int j = 0; j < astones.Count; j++)
+    Dictionary<long, long> blinkStones = new Dictionary<long, long>();
+    foreach(var stoneCount in astones)
     {
-      long stone = astones[j];
+      long stone = stoneCount.Key;
       int length = GetLength(stone);
+      List<long> newStones = new List<long>();
       if (stone == 0)
-        blinkStones.Add(1);
+        newStones.Add(1);
       else if (length % 2 == 0)
       {
         long left = stone / (long)(Math.Pow(10, (length / 2)));
         long right = stone % (long)(Math.Pow(10, (length / 2)));
-        blinkStones.Add(left);
-        blinkStones.Add(right);
+        newStones.Add(left);
+        newStones.Add(right);
       }
       else
       {
-        blinkStones.Add(stone * 2024);
+        newStones.Add(stone * 2024);
+      }
+
+      foreach(long newStone in newStones)
+      {
+        if(blinkStones.ContainsKey(newStone))
+          blinkStones[newStone] += stoneCount.Value;
+        else
+          blinkStones.Add(newStone, stoneCount.Value);
       }
     }
 
