@@ -10,35 +10,35 @@ Dictionary<Point, char> map = new Dictionary<Point, char>();
 for (int i = 0; i < mapInput.Length; i++)
   for (int j = 0; j < mapInput[0].Length; j++)
   {
-    //if (mapInput[i][j] == '@')
-    //  robot = new Point(j, i);
-
-    //map.Add(new Point(j, i), mapInput[i][j]);
-    Point left = new Point(2 * j, i);
-    Point right = new Point(2 * j + 1, i);
-
-    char leftSymbol = ' ';
-    char rightSymbol = ' ';
-
     if (mapInput[i][j] == '@')
-    {
-      leftSymbol = '@';
-      rightSymbol = '.';
       robot = new Point(j, i);
-    }
-    else if (mapInput[i][j] == 'O')
-    {
-      leftSymbol = '[';
-      rightSymbol = ']';
-    }
-    else
-    {
-      leftSymbol = mapInput[i][j];
-      rightSymbol = mapInput[i][j];
-    }
 
-    map.Add(left, leftSymbol);
-    map.Add(right, rightSymbol);
+    map.Add(new Point(j, i), mapInput[i][j]);
+    //Point left = new Point(2 * j, i);
+    //Point right = new Point(2 * j + 1, i);
+
+    //char leftSymbol = ' ';
+    //char rightSymbol = ' ';
+
+    //if (mapInput[i][j] == '@')
+    //{
+    //  leftSymbol = '@';
+    //  rightSymbol = '.';
+    //  robot = new Point(j, i);
+    //}
+    //else if (mapInput[i][j] == 'O')
+    //{
+    //  leftSymbol = '[';
+    //  rightSymbol = ']';
+    //}
+    //else
+    //{
+    //  leftSymbol = mapInput[i][j];
+    //  rightSymbol = mapInput[i][j];
+    //}
+
+    //map.Add(left, leftSymbol);
+    //map.Add(right, rightSymbol);
   }
 
 var directions = new Dictionary<char, Point>()
@@ -72,8 +72,8 @@ foreach (var m in movements)
       (robot, map[robot])
     };
 
-    if (dir.Y != 0)
-    {
+    //if (dir.Y != 0)
+    //{
       while (map[current] != '.' && map[current] != '#')
       {
         current = AddPoints(current, dir);
@@ -88,7 +88,7 @@ foreach (var m in movements)
         map[robot] = '.';
         robot = AddPoints(robot, dir);
       }
-    }
+    //}
 
     //Console.Clear();
     //foreach (var p in map)
