@@ -1,8 +1,10 @@
 ﻿using System.Drawing;
-using static System.Net.Mime.MediaTypeNames;
 
 string[] input = File.ReadAllLines("in.txt");
 
+int MIN_JUMP = 100;
+int CHEAT = 2; // Part 1
+//int CHEAT = 20; // Part 2
 
 Point start = Point.Empty;
 Point end = Point.Empty;
@@ -49,16 +51,15 @@ while (currentPos != end)
   }
 }
 
-int minJump = 100;
 int count = 0;
 for (int i = 0; i < trace.Count; i++)
 {
-  var startJump = trace.Where(p => Distance(p, trace[i]) <= 20).ToArray();
+  var startJump = trace.Where(p => Distance(p, trace[i]) <= CHEAT).ToArray();
   foreach(var sj in startJump)
   {
     var d = Distance(sj, trace[i]);
     int jumpSize = trace.IndexOf(sj) - i - d;
-    if (jumpSize >= minJump)
+    if (jumpSize >= MIN_JUMP)
     {
       if (maxJumps.ContainsKey(jumpSize))
         maxJumps[jumpSize]++;
@@ -71,12 +72,6 @@ for (int i = 0; i < trace.Count; i++)
 }
 
 Console.WriteLine(count);
-
-
-bool IsOnMap(Point p)
-{
-  return p.X >= 0 && p.Y >= 0 && p.X < input[0].Length && p.Y < input.Length;
-}
 
 int Distance(Point p1, Point p2)
 {
