@@ -10,13 +10,17 @@ Dictionary<Point, char> map = new Dictionary<Point, char>();
 for (int i = 0; i < mapInput.Length; i++)
   for (int j = 0; j < mapInput[0].Length; j++)
   {
+    //if (mapInput[i][j] == '@')
+    //  robot = new Point(j, i);
+
+    //map.Add(new Point(j, i), mapInput[i][j]);
     Point left = new Point(2 * j, i);
     Point right = new Point(2 * j + 1, i);
 
     char leftSymbol = ' ';
     char rightSymbol = ' ';
 
-    if(mapInput[i][j] == '@')
+    if (mapInput[i][j] == '@')
     {
       leftSymbol = '@';
       rightSymbol = '.';
@@ -59,31 +63,32 @@ Console.ReadKey();
 var movements = input.Skip(emptyLineIndex + 1).ToArray();
 foreach (var m in movements)
 {
-  foreach(char d in m)
+  foreach (char d in m)
   {
     var dir = directions[d];
-    List<(Point,char)> points = new List<(Point, char)>();
     Point current = robot;
-    
-    while(map[current] != '.' && map[current] != '#')
-      points.Add((current, map[current]));
-
-    if(points.Count > 2)
+    List<(Point, char)> points = new List<(Point, char)>()
     {
-      for(int i = 0; i < points.Count; i++)
-      {
+      (robot, map[robot])
+    };
 
+    if (dir.Y != 0)
+    {
+      while (map[current] != '.' && map[current] != '#')
+      {
+        current = AddPoints(current, dir);
+        points.Add((current, map[current]));
       }
 
+      if (map[current] == '.')
+      {
+        for (var i = 1; i < points.Count; i++)
+          map[points[i].Item1] = points[i - 1].Item2;
+
+        map[robot] = '.';
+        robot = AddPoints(robot, dir);
+      }
     }
-
-
-    if(points.Count > 1)
-    {
-      map[robot] = '.';
-      robot = points[1].Item1;
-      map[robot] = '@';
-    }    
 
     //Console.Clear();
     //foreach (var p in map)
@@ -96,7 +101,12 @@ foreach (var m in movements)
   }
 }
 
-//var boxes = map.Where(kvp => kvp.Value == 'O').ToArray();
-//Console.WriteLine(boxes.Sum(p => p.Key.X + (p.Key.Y*100)));
+var boxes = map.Where(kvp => kvp.Value == 'O').ToArray();
+Console.WriteLine(boxes.Sum(p => p.Key.X + (p.Key.Y * 100)));
 
 //Console.WriteLine();
+
+Point AddPoints(Point p1, Point p2)
+{
+  return new Point(p1.X + p2.X, p1.Y + p2.Y);
+}
