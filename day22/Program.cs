@@ -41,48 +41,62 @@ foreach (var n in input)
   secrets.Add(current);
 }
 
-string[] allSeqStr = allSeq.Select(s => string.Join("", s)).ToArray();
+List<string> allSeqStr = new List<string>();
+List<Dictionary<string, long>> vals = new List<Dictionary<string, long>>();
+for (int iSeq = 0; iSeq < allSeq.Count; iSeq++)
+{
+  Dictionary<string, long> seqVals = new Dictionary<string, long>();
+
+  var seqs = allSeq[iSeq];  
+  for (int i = 0; i < 1996; i++)
+  {
+    string toCheck = GetSequence(seqs, i);
+    if(!seqVals.ContainsKey(toCheck))
+      seqVals[toCheck] = allPrices[iSeq][i + 4];
+  }
+
+  vals.Add(seqVals);
+}
 
 long max = 0;
 
 HashSet<string> checkedSeqs = new HashSet<string>();
 
+// collect all sequences
+HashSet<string> sequences4 = new HashSet<string>();
 for (int iSeq = 0; iSeq < allSeq.Count; iSeq++)
 {
   var seqs = allSeq[iSeq];
 
   for (int i = 0; i < 1997; i++)
   {
-    long sum = 0;
-    //string toCheck = "-2,1,-1,3";
-    string toCheck = seqs[i].ToString() + seqs[i + 1] + seqs[i + 2] + seqs[i + 3];
-    if(!checkedSeqs.Add(toCheck))
-      continue;
-
-    for (int iSeq2 = 0; iSeq2 < allSeq.Count; iSeq2++)
-    {
-      var seqs2 = allSeq[iSeq2];
-      for (int i2 = 0; i2 < 1997; i2++)
-      {
-        if (seqs[i] == seqs2[i2] &&
-            seqs[i+1] == seqs2[i2+1] &&
-            seqs[i+2] == seqs2[i2+2] &&
-            seqs[i+3] == seqs2[i2+3] &&
-            i2 + 4 < seqs2.Count)
-        {
-          sum += allPrices[iSeq2][i2+4];
-          break;
-        }
-      }
-    }
-
-    if (sum > max)
-      max = sum;
+    string toCheck = "," + seqs[i].ToString() + "," + seqs[i + 1] + "," + seqs[i + 2] + "," + seqs[i + 3];
+    sequences4.Add(toCheck);
   }
+}
+
+int count = 0;
+foreach (string seq4 in sequences4)
+{
+  count++;
+  long sum = 0;
+  for (int iSeq = 0; iSeq < allSeq.Count; iSeq++)
+  {
+    var seqs = allSeq[iSeq];
+    
+    if (vals[iSeq].ContainsKey(seq4))
+      sum += vals[iSeq][seq4];
+  }
+
+  if (sum > max)
+    max = sum;
 }
 
 
 Console.WriteLine(secrets.Sum());
 Console.WriteLine(max);
 
-// 2657 too high
+string GetSequence(List<long> seqs, int i)
+{
+  return "," + seqs[i].ToString() + "," + seqs[i + 1] + "," + seqs[i + 2] + "," + seqs[i + 3];
+}
