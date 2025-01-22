@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Security;
 using static System.Net.Mime.MediaTypeNames;
 
 var directions = new Dictionary<char, Point>()
@@ -49,89 +51,10 @@ var directionalKeypad = new Dictionary<Point, char>()
   {new Point(2, 1), '>'},
 };
 
-var numericPaths = new Dictionary<(char, char), List<string>>();
-foreach (var nk in numericKeypad)
-{
-  Queue<(Point, string, HashSet<Point>)> queue = new Queue<(Point, string, HashSet<Point>)>();
-  queue.Enqueue((nk.Key, "", new HashSet<Point>()));
-  
-  while (queue.Any())
-  {
-    var current = queue.Dequeue();
+var allPaths = new Dictionary<(char, char), HashSet<string>>();
 
-    foreach (var dir in directions)
-    {
-      var next = AddPoints(current.Item1, dir.Value);
-      if(!numericKeypad.ContainsKey(next) || current.Item3.Contains(next))
-        continue;
-
-      var newPath = current.Item2 + dir.Key;
-      var nextPoints = new HashSet<Point>(current.Item3);
-      nextPoints.Add(next);
-      queue.Enqueue((next, newPath, nextPoints));
-
-      var hash = (nk.Value, numericKeypad[next]);
-      if(numericPaths.ContainsKey(hash))
-      {
-        if (newPath.Length < numericPaths[hash][0].Length)
-        { 
-          numericPaths[hash].Clear();
-          numericPaths[hash].Add(newPath);
-        }
-        else if (newPath.Length <= numericPaths[hash][0].Length)
-          numericPaths[hash].Add(newPath);
-      }
-      else
-        numericPaths.Add(hash, new List<string>() { newPath });
-    }
-  }
-}
-
-var arrowPaths = new Dictionary<(char, char), List<string>>();
-
-foreach (var dk in directionalKeypad)
-{
-  Queue<(Point, string, HashSet<Point>)> queue = new Queue<(Point, string, HashSet<Point>)>();
-  queue.Enqueue((dk.Key, "", new HashSet<Point>()));
-
-  while (queue.Any())
-  {
-    var current = queue.Dequeue();
-
-    foreach (var dir in directions)
-    {
-      var next = AddPoints(current.Item1, dir.Value);
-      if (!directionalKeypad.ContainsKey(next) || current.Item3.Contains(next))
-        continue;
-
-      var newPath = current.Item2 + dir.Key;
-      var nextPoints = new HashSet<Point>(current.Item3);
-      nextPoints.Add(next);
-      queue.Enqueue((next, newPath, nextPoints));
-
-      var hash = (dk.Value, directionalKeypad[next]);
-      if(hash.Item2 == hash.Item1)
-      {
-        arrowPaths[hash] = new List<string>(){ "A" };
-        continue;
-      }
-
-      if (arrowPaths.ContainsKey(hash))
-      {
-        if (newPath.Length < arrowPaths[hash][0].Length)
-        {
-          arrowPaths[hash].Clear();
-          arrowPaths[hash].Add(newPath);
-        }
-        else if (newPath.Length <= arrowPaths[hash][0].Length)
-          arrowPaths[hash].Add(newPath);
-      }
-      else
-        arrowPaths.Add(hash, new List<string>() { newPath });
-    }
-  }
-}
-
+ComputePaths(numericKeypad);
+ComputePaths(directionalKeypad);
 
 string[] input = 
   {
@@ -141,45 +64,87 @@ string[] input =
   "670A",
   "593A"
   };
-int sum = 0;
+
+
+long sum = 0;
 foreach (var n in input)
 {
-  var step1 = ComputeAllPaths(n, numericPaths);
-  HashSet<string> step2 = new HashSet<string>();
-  int minS2 = int.MaxValue;
-  foreach (var path in step1)
+  HashSet<string> nextStep = new HashSet<string>(){n };
+  long min = 0;
+  for(int i = 0; i < 3; i++)
   {
-    foreach(var pathStep2 in ComputeAllPaths(path, arrowPaths))
-    {
-      if (minS2 > pathStep2.Length)
-        minS2 = pathStep2.Length;
-      step2.Add(pathStep2);
-    }
+    nextStep = ComputeStep(nextStep);
+    min = nextStep.First().Length;
   }
 
-  step2 = step2.Where(s => s.Length == minS2).ToHashSet();
-
-  int minS3 = int.MaxValue;
-  HashSet<string> step3 = new HashSet<string>();
-  foreach (var path in step2)
-  {
-    foreach (var pathStep3 in ComputeAllPaths(path, arrowPaths))
-    {
-      if(minS3 > pathStep3.Length)
-        minS3 = pathStep3.Length;
-      step3.Add(pathStep3);
-    }
-  }
-
-  step3 = step3.Where(s => s.Length == minS3).ToHashSet();
-
-  sum += minS3 * int.Parse(n.Substring(0, n.Length-1));
+  sum += min * int.Parse(n.Substring(0, n.Length-1));
 }
 
 Console.Write(sum);
 
+void ComputePaths(Dictionary<Point, char> keypad)
+{
+  foreach (var nk in keypad)
+  {
+    Queue<(Point, string, HashSet<Point>)> queue = new Queue<(Point, string, HashSet<Point>)>();
+    queue.Enqueue((nk.Key, "", new HashSet<Point>()));
 
-HashSet<string> ComputeAllPaths(string input, Dictionary<(char, char), List<string>> paths)
+    while (queue.Any())
+    {
+      var current = queue.Dequeue();
+
+      foreach (var dir in directions)
+      {
+        var next = AddPoints(current.Item1, dir.Value);
+        if (!keypad.ContainsKey(next) || current.Item3.Contains(next))
+          continue;
+
+        var newPath = current.Item2 + dir.Key;
+        var nextPoints = new HashSet<Point>(current.Item3);
+        nextPoints.Add(next);
+        queue.Enqueue((next, newPath, nextPoints));
+
+        var hash = (nk.Value, keypad[next]);
+        if (allPaths.ContainsKey(hash))
+        {
+          if (newPath.Length < allPaths[hash].First().Length)
+          {
+            allPaths[hash].Clear();
+            allPaths[hash].Add(newPath);
+          }
+          else if (newPath.Length <= allPaths[hash].First().Length)
+            allPaths[hash].Add(newPath);
+        }
+        else
+          allPaths.Add(hash, new HashSet<string>() { newPath });
+      }
+    }
+  }
+}
+
+HashSet<string> ComputeStep(HashSet<string> prevStep)
+{
+  long minS3 = long.MaxValue;
+  HashSet<string> step3 = new HashSet<string>();
+  foreach (var path in prevStep)
+  {
+    foreach (var pathStep3 in ComputeAllPaths2(path))
+    {
+      if (minS3 > pathStep3.Length)
+      {
+        minS3 = pathStep3.Length;
+        step3.Clear();
+      }
+      if (minS3 == pathStep3.Length)
+        step3.Add(pathStep3);
+    }
+  }
+
+  return step3;
+}
+
+
+HashSet<string> ComputeAllPaths(string input)
 {
   var minLength = int.MaxValue;
   HashSet<string> res = new HashSet<string>();
@@ -204,7 +169,7 @@ HashSet<string> ComputeAllPaths(string input, Dictionary<(char, char), List<stri
     char currentChar = input[currentIndex];
     char prevChar = currentIndex == 0 ? 'A' : input[currentIndex - 1];
 
-    foreach (var next in paths[(prevChar, currentChar)])
+    foreach (var next in allPaths[(prevChar, currentChar)])
     {
       if(prevChar == currentChar)
         stack.Push((currentIndex + 1, current.Item2 + 'A'));
@@ -214,6 +179,37 @@ HashSet<string> ComputeAllPaths(string input, Dictionary<(char, char), List<stri
   }
 
   return res;
+}
+
+HashSet<string> ComputeAllPaths2(string input)
+{
+  Dictionary<(int,int),int> mins = new Dictionary<(int, int), int>();
+
+  Stack<(string,int, int)> stack = new Stack<(string, int, int)>();
+  stack.Push((input, 0, 0));
+
+  while(stack.Any())
+  {
+    var current = stack.Pop();
+    string seq = current.Item1;
+    int lvl = current.Item2;
+    int count = current.Item3;
+
+    foreach(var pair in seq.Zip(seq.Skip(1)))
+    {
+      int minPath = 0;
+
+      char from = pair.First;
+      char to = pair.Second;
+      foreach(var path in allPaths[(from, to)])
+      {
+        int newCount = count + path.Length;
+        stack.Push((path, newCount, lvl+1));
+      }
+    }
+  }
+
+  return null;
 }
 
 int Distance(Point p1, Point p2)
