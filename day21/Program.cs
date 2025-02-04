@@ -56,28 +56,26 @@ var allPaths = new Dictionary<(char, char), HashSet<string>>();
 ComputePaths(numericKeypad);
 ComputePaths(directionalKeypad);
 
-string[] input = 
+foreach(var key in allPaths.Keys)
+{ 
+  if(key.Item1 == key.Item2)
+    allPaths[key] = new HashSet<string>(){ "A" };    
+}
+
+string[] input =
   {
   "964A",
   "140A",
   "413A",
   "670A",
-  "593A"
+  "593A",
   };
 
 
 long sum = 0;
 foreach (var n in input)
 {
-  HashSet<string> nextStep = new HashSet<string>(){n };
-  long min = 0;
-  for(int i = 0; i < 3; i++)
-  {
-    nextStep = ComputeStep(nextStep);
-    min = nextStep.First().Length;
-  }
-
-  sum += min * int.Parse(n.Substring(0, n.Length-1));
+  sum += int.Parse(n.Substring(0, n.Length-1)) * ComputeAllPaths2("A" + n, 25);
 }
 
 Console.Write(sum);
@@ -103,7 +101,7 @@ void ComputePaths(Dictionary<Point, char> keypad)
         var nextPoints = new HashSet<Point>(current.Item3);
         nextPoints.Add(next);
         queue.Enqueue((next, newPath, nextPoints));
-
+        newPath = newPath + "A";
         var hash = (nk.Value, keypad[next]);
         if (allPaths.ContainsKey(hash))
         {
@@ -122,99 +120,52 @@ void ComputePaths(Dictionary<Point, char> keypad)
   }
 }
 
-HashSet<string> ComputeStep(HashSet<string> prevStep)
+long ComputeAllPaths2(string input, int steps)
 {
-  long minS3 = long.MaxValue;
-  HashSet<string> step3 = new HashSet<string>();
-  foreach (var path in prevStep)
-  {
-    foreach (var pathStep3 in ComputeAllPaths2(path))
-    {
-      if (minS3 > pathStep3.Length)
-      {
-        minS3 = pathStep3.Length;
-        step3.Clear();
-      }
-      if (minS3 == pathStep3.Length)
-        step3.Add(pathStep3);
-    }
-  }
-
-  return step3;
-}
+  Dictionary<((char, char), int), long> mins = new Dictionary<((char, char), int), long>();
+  foreach(var path in allPaths)
+    mins[(path.Key, steps)] = path.Value.First().Length;
 
 
-HashSet<string> ComputeAllPaths(string input)
-{
-  var minLength = int.MaxValue;
-  HashSet<string> res = new HashSet<string>();
+  Stack<((char, char), int)> stack = new Stack<((char, char), int)>();
+  var inputPairs = input.Zip(input.Skip(1));
+  foreach (var pair in inputPairs)
+    stack.Push((pair, 0));
 
-  Stack<(int, string)> stack = new Stack<(int, string)>();
-  stack.Push((0, ""));
   while (stack.Any())
   {
     var current = stack.Pop();
-    int currentIndex = current.Item1;
-    if (currentIndex == input.Length)
+
+    var currentPair = current.Item1;
+    int currentStep = current.Item2;
+
+    foreach (var p in allPaths[current.Item1])
     {
-      if(minLength < current.Item2.Length)
-        continue;
-
-      minLength = current.Item2.Length;      
-
-      res.Add(current.Item2);
-      continue;
-    }
-
-    char currentChar = input[currentIndex];
-    char prevChar = currentIndex == 0 ? 'A' : input[currentIndex - 1];
-
-    foreach (var next in allPaths[(prevChar, currentChar)])
-    {
-      if(prevChar == currentChar)
-        stack.Push((currentIndex + 1, current.Item2 + 'A'));
-      else
-        stack.Push((currentIndex + 1, current.Item2 + next + 'A'));
-    }
-  }
-
-  return res;
-}
-
-HashSet<string> ComputeAllPaths2(string input)
-{
-  Dictionary<(int,int),int> mins = new Dictionary<(int, int), int>();
-
-  Stack<(string,int, int)> stack = new Stack<(string, int, int)>();
-  stack.Push((input, 0, 0));
-
-  while(stack.Any())
-  {
-    var current = stack.Pop();
-    string seq = current.Item1;
-    int lvl = current.Item2;
-    int count = current.Item3;
-
-    foreach(var pair in seq.Zip(seq.Skip(1)))
-    {
-      int minPath = 0;
-
-      char from = pair.First;
-      char to = pair.Second;
-      foreach(var path in allPaths[(from, to)])
+      string newPath = "A" + p;
+      int nextStep = currentStep + 1;
+      
+      var zip = newPath.Zip(newPath.Skip(1)).ToArray();
+      var missingPairs = zip.Where(z => !mins.ContainsKey((z, nextStep))).ToArray();
+      if(missingPairs.Count() == 0)
       {
-        int newCount = count + path.Length;
-        stack.Push((path, newCount, lvl+1));
+        long newCost = zip.Sum(z => mins[(z, nextStep)]);
+        if (!mins.ContainsKey(current))
+          mins[current] = newCost;
+        if (mins[current] > newCost)
+          mins[current] = newCost;
+      }
+      else
+      {
+        stack.Push(current);
+        foreach (var pair in missingPairs)
+          stack.Push((pair, nextStep));
       }
     }
   }
+  long res = inputPairs.Sum(p => mins[(p, 0)]);
+  Console.WriteLine(res);
 
-  return null;
-}
-
-int Distance(Point p1, Point p2)
-{
-  return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
+  return res;
 }
 
 Point AddPoints(Point p1, Point p2)
