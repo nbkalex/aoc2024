@@ -6,6 +6,13 @@ var wires = input.Take(separatorIndex).Select(w => w.Split(": ")).ToDictionary(k
 
 var gates = input.Skip(separatorIndex + 1).Select(g => g.Split(" -> ")).ToDictionary(k => k[1], v => v[0].Split(" "));
 
+var gatesDef = new Dictionary<string, Func<int, int, int>>()
+  {
+    {"AND", (a,b) => a & b },
+    {"OR", (a,b) => a | b },
+    {"XOR", (a,b) => a ^ b }
+  };
+
 HashSet<string> allwires = new HashSet<string>();
 foreach (var g in gates)
 {
@@ -18,44 +25,56 @@ long x = GetNumber("x", wires);
 long y = GetNumber("y", wires);
 string sumBin = Convert.ToString(x + y, 2);
 
-var firstRun = RunProgram(gates, "z11", "z11");
+var res = RunProgram(gates);
 
-HashSet<string> validOutputs = new HashSet<string>();
-foreach (var output in gates.Keys)
+var zOutputs = gates.Keys.Where(g => g.StartsWith("z")).OrderBy(g => g).ToArray();
+Dictionary<string, int> unfolded = new Dictionary<string, int>(wires);
+List<string> unfoldedStr = new List<string>();
+foreach (var z in zOutputs)
 {
-  foreach (var output2 in gates.Keys)
+  Dictionary<string, HashSet<string>> operands = new Dictionary<string, HashSet<string>>();
+  string val = z;
+
+  Stack<string> stack = new Stack<string>();
+  stack.Push(z);
+  while (stack.Any())
   {
-    if (output == output2 || !gates.ContainsKey(output) || !gates.ContainsKey(output2) || output.StartsWith("z") || output2.StartsWith("z"))
-      continue;
+    var current = stack.Pop();
 
-    var testGates = new Dictionary<string, string[]>(gates);
-    var run = RunProgram(testGates, output, output2);
-    if(run == null) continue;
+    string op1 = gates[current][0];
+    string op2 = gates[current][2];
+    string instr = gates[current][1];
 
-    var vals0 = run.Keys.Where(v => run[v] == '0');
-    var vals1 = run.Keys.Where(v => run[v] == '1');
-    if (run.Count == 6 && vals0.Count() == 3)
-    {
-      var zip = vals0.Zip(vals1);
-      foreach (var pair in zip)
-        SwapWires(testGates, GetZName(pair.First), GetZName(pair.Second));
-
-      var test = RunProgram(testGates, output, output2);
-      if (test.Count != 0)
-        continue;
-
-      List<string> outputs = new List<string>(){ output, output2 };
-      foreach(var o in run.Keys)
-        outputs.Add(GetZName(o));
-      outputs.Sort();
-
-      validOutputs.Add(string.Join(',', outputs));
+    if (!unfolded.ContainsKey(op1) || !unfolded.ContainsKey(op2))
+    { 
+      stack.Push(current);
+      if (!unfolded.ContainsKey(op1))
+        stack.Push(op1);
+      if (!unfolded.ContainsKey(op2))
+        stack.Push(op2);
     }
+    else
+      unfolded[current] = gatesDef[instr](unfolded[op1], unfolded[op2]);
   }
 }
 
-foreach(var valid in validOutputs)
-  Console.WriteLine(valid);
+List<string> swaps = new List<string>()
+{
+  "vhm", "z14",
+  "cnk", "qwf",
+  "mps", "z27",
+  "msq", "z39",
+};
+swaps.Sort();
+
+Console.WriteLine(string.Join(',', swaps));
+
+SwapWires(gates, "vhm", "z14");
+SwapWires(gates, "cnk", "qwf");
+SwapWires(gates, "mps", "z27");
+SwapWires(gates, "msq", "z39");
+
+var run = RunProgram(gates);
 
 
 Console.ReadKey();
@@ -66,20 +85,18 @@ string GetZName(int zIndex)
   return "z" + (zIndex < 10 ? "0" : "") + zIndex.ToString();
 }
 
-Dictionary<int, char> RunProgram(Dictionary<string, string[]> aGates, string swap1 = "", string swap2 = "")
+Dictionary<int, char> RunProgram(Dictionary<string, string[]> aGates)
 {
   Dictionary<string, string[]> gates2 = new Dictionary<string, string[]>(aGates);
   var wires2 = new Dictionary<string, int>(wires);
 
   Dictionary<string, Func<string, string, int>> gatesDef = new Dictionary<string, Func<string, string, int>>()
-{
-  {"AND", (a,b) => wires2[a] & wires2[b] },
-  {"OR", (a,b) => wires2[a] | wires2[b] },
-  {"XOR", (a,b) => wires2[a] ^ wires2[b] }
-};
+  {
+    {"AND", (a,b) => wires2[a] & wires2[b] },
+    {"OR", (a,b) => wires2[a] | wires2[b] },
+    {"XOR", (a,b) => wires2[a] ^ wires2[b] }
+  };
 
-  if(swap1 != "")
-    SwapWires(gates2, swap1, swap2);
 
   while (wires2.Count != allwires.Count)
   {
